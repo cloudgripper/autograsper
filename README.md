@@ -103,7 +103,7 @@ pip install numpy opencv-python python-dotenv
 ```
 
 #### 1.B: CloudGripper API
-Clone the [CloudGripper API repo](https://github.com/cloudgripper/cloudgripper-api), place the Autograsper code in that directory. Move the `utils.py` file to the `library` directory.
+Clone the [CloudGripper API repo](https://github.com/cloudgripper/cloudgripper-api), place the Autograsper code in that directory. Move the `utils.py` and `rgb_object_tracker.py` file to the `library` directory.
 
 ### Step 2: Set Environment Variables
 
