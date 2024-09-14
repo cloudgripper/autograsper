@@ -9,7 +9,7 @@ from typing import Optional, Tuple
 
 import numpy as np
 from autograsper import Autograsper, RobotActivity
-from recording import Recorder
+from recorder import Recorder
 
 from library.rgb_object_tracker import all_objects_are_visible
 
