@@ -279,13 +279,7 @@ class Autograsper:
                 self.wait_for_start_signal()
                 self.start_flag = False
 
-                # self.stack_objects(colors, block_heights, stack_position)
-                self.robot.move_xy(0.5, 0.5)
-                time.sleep(1)
-                self.robot.move_xy(0.9, 0.2)
-                time.sleep(1)
-                self.robot.move_xy(0.1, 0.5)
-                time.sleep(2)
+                self.stack_objects(colors, block_heights, stack_position)
 
                 self.go_to_start()
                 time.sleep(1)
