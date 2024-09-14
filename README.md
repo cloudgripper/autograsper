@@ -97,11 +97,15 @@ The autograsper module is an example usage of the utils functions that scripts t
 
 ### Step 1: Install Dependencies
 
-#### 1.A: pip packages
-Ensure you have Python 3.x installed. Install the required Python packages using pip:
-
+#### 1.A: Setup virtual environment and install dependencies
+Ensure you have Python 3.x installed. 
+Create a virtual environment
 ```sh
-pip install numpy opencv-python python-dotenv
+python -m venv venv
+```
+Install the required dependencies:
+```sh
+pip install -r requirements.txt
 ```
 
 #### 1.B: CloudGripper API
