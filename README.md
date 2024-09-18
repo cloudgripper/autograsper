@@ -7,6 +7,11 @@ This project contains the Autograsper toolkit and involves automation of robotic
 ### Example Dataset
 An **example dataset** collected using Autograsper containing over 200 episodes of stacking and destacking can be found [here](https://cloudgripper.eecs.kth.se:8443/dataset/Autograsper_sample_dataset.zip).
 
+### Compatability with CloudGripper Simulation
+This toolkit is compatible with the CloudGripper MuJoCo simulation, which will be published soon. The mirroring functionality of the real CloudGripper API and the simulation API enables switching between the two environments by changing only **one line of code**. Below is an illustration of the same Autograsper script being run on the respective environments.
+
+![compare](https://github.com/user-attachments/assets/fb710cf8-9b92-4c1c-8df6-44a5c08db3fe)
+
 
 ### **Featuring:**
 
