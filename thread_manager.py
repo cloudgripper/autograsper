@@ -6,10 +6,10 @@ import time
 import traceback
 from configparser import ConfigParser
 from typing import Optional, Tuple
-
 import numpy as np
-from autograsper import Autograsper, RobotActivity
-from recorder import Recorder
+from stacking_autograsper import StackingAutograsper, RobotActivity
+from random_grasping_task import RandomGrasper
+from recording import Recorder
 
 from library.rgb_object_tracker import all_objects_are_visible
 
@@ -33,7 +33,7 @@ class SharedState:
 shared_state = SharedState()
 
 
-def load_config(config_file: str = "stack_from_scratch/config.ini") -> ConfigParser:
+def load_config(config_file: str = "autograsper/config.ini") -> ConfigParser:
     config = ConfigParser()
     config.read(config_file)
     return config
@@ -54,20 +54,8 @@ def handle_error(exception: Exception) -> None:
     ERROR_EVENT.set()
 
 
-def run_autograsper(
-    autograsper: Autograsper,
-    colors,
-    block_heights,
-    position_bank,
-    stack_position,
-    object_size,
-) -> None:
-    try:
-        autograsper.run_grasping(
-            colors, block_heights, position_bank, stack_position, object_size
-        )
-    except Exception as e:
-        handle_error(e)
+def run_autograsper(autograsper: StackingAutograsper) -> None:
+        autograsper.run_grasping()
 
 
 def setup_recorder(output_dir: str, robot_idx: str, config: ConfigParser) -> Recorder:
@@ -89,7 +77,7 @@ def run_recorder(recorder: Recorder) -> None:
         handle_error(e)
 
 
-def monitor_state(autograsper: Autograsper, shared_state: SharedState) -> None:
+def monitor_state(autograsper: StackingAutograsper, shared_state: SharedState) -> None:
     try:
         while not ERROR_EVENT.is_set():
             with STATE_LOCK:
@@ -106,7 +94,7 @@ def is_stacking_successful(recorder: Recorder, colors) -> bool:
     return not all_objects_are_visible(colors, recorder.bottom_image, debug=False)
 
 
-def monitor_bottom_image(recorder: Recorder, autograsper: Autograsper) -> None:
+def monitor_bottom_image(recorder: Recorder, autograsper: StackingAutograsper) -> None:
     try:
         while not ERROR_EVENT.is_set():
             if recorder and recorder.bottom_image is not None:
@@ -132,42 +120,68 @@ def create_new_data_point(script_dir: str) -> Tuple[str, str, str]:
 
 def parse_arguments() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Robot Controller")
-    parser.add_argument("--robot_idx", type=str, required=True, help="Robot index")
+    parser.add_argument("--robot_idx", default="robot23", type=str, required=False, help="Robot index")
     parser.add_argument(
         "--config",
         type=str,
-        default="config.ini",
+        default="autograsper/config.ini",
         help="Path to the configuration file",
     )
     return parser.parse_args()
 
 
-def initialize(args: argparse.Namespace) -> Tuple[Autograsper, ConfigParser, str]:
-    config = load_config()
+def initialize(
+    args: argparse.Namespace,
+) -> Tuple[StackingAutograsper, ConfigParser, str]:
+    import ast
+
+    config = load_config(args.config)
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    autograsper = Autograsper(args, output_dir="")
+
+    # Check if 'experiment' and 'camera' sections exist
+    if "experiment" not in config:
+        raise KeyError(
+            "The 'experiment' section is missing from the configuration file."
+        )
+    if "camera" not in config:
+        raise KeyError("The 'camera' section is missing from the configuration file.")
+
+    # Read task-specific parameters from config using ast.literal_eval
+    colors = ast.literal_eval(config["experiment"]["colors"])
+    block_heights = np.array(ast.literal_eval(config["experiment"]["block_heights"]))
+    position_bank = ast.literal_eval(config["experiment"]["position_bank"])
+    stack_position = ast.literal_eval(config["experiment"]["stack_position"])
+    object_size = config.getfloat("experiment", "object_size")
+
+    # Read camera calibration parameters using ast.literal_eval
+    try:
+        camera_matrix = np.array(ast.literal_eval(config["camera"]["m"]))
+        distortion_coefficients = np.array(ast.literal_eval(config["camera"]["d"]))
+    except Exception as e:
+        print(f"Error parsing camera calibration parameters: {e}")
+        raise
+
+    autograsper = RandomGrasper(
+        args,
+        output_dir="",
+        colors=colors,
+        block_heights=block_heights,
+        position_bank=position_bank,
+        stack_position=stack_position,
+        object_size=object_size,
+        camera_matrix=camera_matrix,
+        distortion_coefficients=distortion_coefficients,
+    )
     return autograsper, config, script_dir
 
 
 def start_threads(
-    autograsper: Autograsper, config: ConfigParser
-) -> Tuple[threading.Thread, threading.Thread, list]:
-    colors = eval(config["experiment"]["colors"])
-    block_heights = np.array(eval(config["experiment"]["block_heights"]))
-    position_bank = eval(config["experiment"]["position_bank"])
-    stack_position = eval(config["experiment"]["stack_position"])
-    object_size = config.getfloat("experiment", "object_size")
+    autograsper: StackingAutograsper,
+) -> Tuple[threading.Thread, threading.Thread]:
 
     autograsper_thread = threading.Thread(
         target=run_autograsper,
-        args=(
-            autograsper,
-            colors,
-            block_heights,
-            position_bank,
-            stack_position,
-            object_size,
-        ),
+        args=(autograsper,),
     )
     monitor_thread = threading.Thread(
         target=monitor_state, args=(autograsper, shared_state)
@@ -176,14 +190,13 @@ def start_threads(
     autograsper_thread.start()
     monitor_thread.start()
 
-    return autograsper_thread, monitor_thread, colors
+    return autograsper_thread, monitor_thread
 
 
 def handle_state_changes(
-    autograsper: Autograsper,
+    autograsper: StackingAutograsper,
     config: ConfigParser,
     script_dir: str,
-    colors,
     args: argparse.Namespace,
 ) -> None:
     prev_robot_activity = RobotActivity.STARTUP
@@ -197,6 +210,11 @@ def handle_state_changes(
                     and shared_state.recorder
                 ):
                     shared_state.recorder.write_final_image()
+
+                if shared_state.state == RobotActivity.STARTUP and prev_robot_activity != RobotActivity.STARTUP:
+                    shared_state.recorder.pause = True
+                    time.sleep(10)
+                    shared_state.recorder.pause = False
 
                 if shared_state.state == RobotActivity.ACTIVE:
                     session_dir, task_dir, restore_dir = create_new_data_point(
@@ -223,13 +241,22 @@ def handle_state_changes(
                     autograsper.start_flag = True
 
                 elif shared_state.state == RobotActivity.RESETTING:
-                    status_message = (
-                        "success"
-                        if is_stacking_successful(shared_state.recorder, colors)
-                        else "fail"
-                    )
-                    if status_message == "fail":
-                        autograsper.failed = True
+
+                    # this is for STACKING. TODO: generalize this functionality
+                    # status_message = (
+                    #     "success"
+                    #     if is_stacking_successful(
+                    #         shared_state.recorder, autograsper.colors
+                    #     )
+                    #     else "fail"
+                    # )
+                    # if status_message == "fail":
+                    #     autograsper.failed = True
+
+                    if autograsper.failed:
+                        status_message = "fail"
+                    else:
+                        status_message = "success"
 
                     logger.info(status_message)
                     with open(
@@ -267,10 +294,10 @@ def main():
     args = parse_arguments()
     autograsper, config, script_dir = initialize(args)
 
-    autograsper_thread, monitor_thread, colors = start_threads(autograsper, config)
+    autograsper_thread, monitor_thread = start_threads(autograsper)
 
     try:
-        handle_state_changes(autograsper, config, script_dir, colors, args)
+        handle_state_changes(autograsper, config, script_dir, args)
     except Exception as e:
         handle_error(e)
     finally:
