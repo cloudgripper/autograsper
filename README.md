@@ -20,7 +20,155 @@ This toolkit is compatible with the CloudGripper MuJoCo simulation, which will b
 - **recorder**: a class that records all robot data during tasks and stores it in a clear and structured way.
 - **thread_manager**: an example of using all above to perform and record a large number of robot tasks.
 
-## Modules Overview
+# Usage Guide
+
+## Setting Up Your Environment
+
+### Step 1: Install Dependencies
+
+#### 1.A: Setup virtual environment and install dependencies
+Ensure you have Python 3.x installed. 
+Create a virtual environment
+```sh
+python -m venv venv
+```
+Install the required dependencies:
+```sh
+pip install -r requirements.txt
+```
+
+#### 1.B: CloudGripper API
+Clone the [CloudGripper API repo](https://github.com/cloudgripper/cloudgripper-api), place the Autograsper code in that directory. Move the `utils.py` and `rgb_object_tracker.py` file to the `library` directory.
+
+### Step 2: Set Environment Variables
+
+The code requires an environment variable `ROBOT_TOKEN` to authenticate with the GripperRobot API. Create a `.env` file in the project root with the following content:
+
+```env
+ROBOT_TOKEN=your_robot_token_here
+```
+
+## Running the Code
+
+### Running the Autograsper
+
+The `autograsper.py` script is controls the robot to perform stacking tasks. Can be used as a template for scheduled robot control.
+
+1. **Command-Line Arguments**:
+
+   - `--robot_idx`: The index of the robot to be controlled.
+   - `--output_dir`: The directory to save state data.
+
+2. **Example Command**:
+
+   ```sh
+   python Autograsper/autograsper.py --robot_idx 1 --output_dir /path/to/output
+   ```
+
+3. **Description**:
+   - Initializes the `Autograsper` class.
+   - Runs the main grasping loop, where the robot performs a series of tasks such as moving, gripping, and placing objects.
+   - Saves the state of the robot after each action for later analysis.
+
+### Recording the Robot's Actions
+
+The `recorder.py` script records the robot's actions, capturing both top and bottom camera views.
+
+1. **Command-Line Arguments**:
+
+   - `--robot_idx`: The index of the robot to be recorded.
+   - `--output_dir`: The directory to save recorded videos and final images.
+
+2. **Example Command**:
+
+   ```sh
+   python Autograsper/recorder.py --robot_idx 1 --output_dir /path/to/output
+   ```
+
+3. **Description**:
+   - Initializes the `Recorder` class.
+   - Records the robot's actions, saving video files at specified intervals.
+   - Displays the bottom camera view and waits for user input to stop recording.
+
+# How to Define a Task
+
+This framework provides an extensible base class for defining custom robot tasks. Here's how you can define a new task using the existing toolkit:
+
+## Step 1: Create a New Task Class
+
+To define a new task, create a new Python class that inherits from `AutograsperBase`. This abstract base class provides common functionality for initializing the robot, camera calibration, and controlling the robot. You must implement specific task behaviors by overriding two key methods: `perform_task()` and `reset_task()`.
+
+```python
+from grasper import AutograsperBase
+from library.rgb_object_tracker import get_object_pos
+from library.utils import OrderType
+
+class NewTaskAutograsper(AutograsperBase):
+    def __init__(
+        self,
+        args,
+        output_dir: str = "",
+        camera_matrix=None,
+        distortion_coefficients=None,
+    ):
+        super().__init__(args, output_dir, camera_matrix, distortion_coefficients)
+        # Custom task-specific initialization goes here
+
+    def perform_task(self):
+        # Implement the specific logic for this task here
+        object_position = get_object_pos(self.bottom_image, self.robot_idx, "target_color")
+        self.pickup_and_place_object(
+            object_position,
+            object_height=0,
+            target_height=0,
+            target_position=[0.5, 0.5],
+        )
+
+    def reset_task(self):
+        # Reset the environment after performing the task
+        print("Resetting task to original state")
+```
+
+## Step 2: Override Task-Specific Methods
+
+### `perform_task()`
+This method should contain the core logic of the task. Use methods like `pickup_and_place_object()` to implement the series of actions the robot should perform. For example, the robot may be instructed to move to an object, pick it up, and place it at a target location.
+
+### `reset_task()`
+After the task is complete, the `reset_task()` method should bring the environment back to the starting state. This could include resetting the position of objects or performing cleanup actions to ensure the next task can start correctly.
+
+## Step 3: Use Helper Methods
+
+The base class provides several utility methods you can use to simplify your task implementation:
+
+- **`queue_robot_orders()`**: Queue up a list of commands for the robot.
+- **`pickup_and_place_object()`**: Pick up an object from one position and move it to another.
+- **`wait_for_start_signal()`**: Wait for a signal to start the task, useful for coordinating tasks.
+
+These helper methods make it easier to manage common operations like moving the robot arm, picking objects, or executing a sequence of commands.
+
+## Example Task
+
+Below is a simple example that defines a new task in which the robot picks up a blue block and places it at a specific location:
+
+```python
+class BlueBlockPicker(AutograsperBase):
+    def perform_task(self):
+        blue_block_position = get_object_pos(self.bottom_image, self.robot_idx, "blue")
+        self.pickup_and_place_object(
+            blue_block_position,
+            object_height=0.05,
+            target_height=0.1,
+            target_position=[0.7, 0.7],
+        )
+
+    def reset_task(self):
+        # Bring the blue block back to the starting area
+        self.recover_after_fail()
+```
+
+
+# Modules Overview
 
 ### utils.py
 
@@ -97,116 +245,3 @@ The autograsper module is an example usage of the utils functions that scripts t
 #### Main Execution
 
 - Sets up command-line argument parsing and initializes the `Autograsper` and `Recorder` instances to run in parallel. It monitors their states and manages session directories.
-
-# Usage Guide
-
-## Setting Up Your Environment
-
-### Step 1: Install Dependencies
-
-#### 1.A: Setup virtual environment and install dependencies
-Ensure you have Python 3.x installed. 
-Create a virtual environment
-```sh
-python -m venv venv
-```
-Install the required dependencies:
-```sh
-pip install -r requirements.txt
-```
-
-#### 1.B: CloudGripper API
-Clone the [CloudGripper API repo](https://github.com/cloudgripper/cloudgripper-api), place the Autograsper code in that directory. Move the `utils.py` and `rgb_object_tracker.py` file to the `library` directory.
-
-### Step 2: Set Environment Variables
-
-The code requires an environment variable `ROBOT_TOKEN` to authenticate with the GripperRobot API. Create a `.env` file in the project root with the following content:
-
-```env
-ROBOT_TOKEN=your_robot_token_here
-```
-
-## Running the Code
-
-### Running the Autograsper
-
-The `autograsper.py` script is controls the robot to perform stacking tasks. Can be used as a template for scheduled robot control.
-
-1. **Command-Line Arguments**:
-
-   - `--robot_idx`: The index of the robot to be controlled.
-   - `--output_dir`: The directory to save state data.
-
-2. **Example Command**:
-
-   ```sh
-   python Autograsper/autograsper.py --robot_idx 1 --output_dir /path/to/output
-   ```
-
-3. **Description**:
-   - Initializes the `Autograsper` class.
-   - Runs the main grasping loop, where the robot performs a series of tasks such as moving, gripping, and placing objects.
-   - Saves the state of the robot after each action for later analysis.
-
-### Recording the Robot's Actions
-
-The `recorder.py` script records the robot's actions, capturing both top and bottom camera views.
-
-1. **Command-Line Arguments**:
-
-   - `--robot_idx`: The index of the robot to be recorded.
-   - `--output_dir`: The directory to save recorded videos and final images.
-
-2. **Example Command**:
-
-   ```sh
-   python Autograsper/recorder.py --robot_idx 1 --output_dir /path/to/output
-   ```
-
-3. **Description**:
-   - Initializes the `Recorder` class.
-   - Records the robot's actions, saving video files at specified intervals.
-   - Displays the bottom camera view and waits for user input to stop recording.
-
-### Example: Collecting Data for Stacking
-
-The `thread_manager.py` script combines the functionality of `autograsper.py` and `recorder.py` to automate data collection for stacking tasks.
-
-1. **Command-Line Arguments**:
-
-   - `--robot_idx`: The index of the robot to be controlled and recorded.
-
-2. **Example Command**:
-
-   ```sh
-   python Autograsper/thread_manager.py --robot_idx 1
-   ```
-
-3. **Description**:
-   - Initializes the `Autograsper` and `Recorder` classes.
-   - Runs the autograsper and recorder in parallel threads.
-   - Monitors the state of the autograsper and manages recording sessions based on the robot's activity state.
-   - Creates new data points and organizes the output into structured directories.
-
-#### Detailed Workflow
-
-1. **Initialization**:
-
-   - The `Autograsper` initializes with command-line arguments, setting up the robot and its parameters.
-   - The `Recorder` initializes with a session ID, output directory, camera calibration parameters, and robot token.
-
-2. **Running the Autograsper**:
-
-   - The autograsper performs a series of actions such as moving to specific coordinates, opening and closing the gripper, and stacking objects.
-   - Each action's state is saved for later analysis.
-
-3. **Recording Sessions**:
-
-   - The recorder captures video frames from the robot's cameras.
-   - Videos are saved in the specified output directory.
-   - The bottom camera view is displayed for real-time monitoring.
-
-4. **State Monitoring**:
-   - The `thread_manager.py` script monitors the autograsper's state.
-   - When the robot's state changes, the script handles the transition, creating new data points and managing recording sessions accordingly.
-   - The script ensures that recording continues seamlessly through state changes, such as resetting or completing tasks.
