@@ -7,8 +7,8 @@ import traceback
 from configparser import ConfigParser
 from typing import Optional, Tuple
 import numpy as np
-from stacking_autograsper import StackingAutograsper, RobotActivity
-from random_grasping_task import RandomGrasper
+from examples.stacking_autograsper import StackingAutograsper, RobotActivity
+from examples.random_grasping_task import RandomGrasper
 from recording import Recorder
 
 from library.rgb_object_tracker import all_objects_are_visible
