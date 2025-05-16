@@ -1,2 +1,10 @@
 .env
 __pycache__
+autograsper/custom_graspers/backgammon_grasper.py
+autograsper/custom_graspers/evaluation_grasper.py
+autograsper/custom_graspers/example_grasper.py
+autograsper/custom_graspers/random_grasping_task.py
+autograsper/custom_graspers/stacking_autograsper.py
+autograsper/custom_graspers/subtask1Grasper.py
+autograsper/recorded_data
+autograsper/config.yaml

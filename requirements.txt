@@ -1,3 +1,9 @@
-numpy
+requests
 opencv-python
+numpy
+pybase64
 python-dotenv
+pynput
+matplotlib
+pyyaml
+flask
