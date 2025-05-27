@@ -23,7 +23,7 @@ app = Flask(__name__)
 global_coordinator = None
 
 
-@app.route("/video_feed")
+@app.route("/")
 def video_feed():
     """
     Route that streams the video feed as an MJPEG stream.
