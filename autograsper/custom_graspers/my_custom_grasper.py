@@ -40,11 +40,14 @@ class MyCustomGrasper(AutograsperBase):
                 print(f"{self.target_color} object not found.")
                 self.failed = True
                 return
+        except Exception as e:
+            print(e)
 
             # ... sequence of orders using self.queue_orders(...) ...
 
-            if not self._check_success():  # Implement your success check
-                self.failed = True
-        except Exception as e:
-            print(f"Error in perform_task: {e}")
-            self.failed = True
+        #     if not self._check_success():  # Implement your success check
+        #         self.failed = True
+        # except Exception as e:
+        #     print(f"Error in perform_task: {e}")
+        #     self.failed = True
+
