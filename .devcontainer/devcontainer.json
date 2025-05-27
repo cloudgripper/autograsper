@@ -1,0 +1,60 @@
+{
+	"name": "Autograsper",
+	"build": {
+		"context": "..",
+		"dockerfile": "Dockerfile"
+	},
+
+	"forwardPorts": [3000]
+
+//	"runArgs": [
+//		"--gpus",
+//		"all"
+//	],
+
+
+// uncomment if you're on Wayland and want to foward Xwayland session to devcontainer
+//	"mounts": [
+//    "source=/tmp/.X11-unix,target=/tmp/.X11-unix,type=bind"
+//	],
+//	"containerEnv": {
+//		"DISPLAY": "${localEnv:DISPLAY}"
+//	},
+
+
+
+
+	"features": {
+	},
+
+	// 5. Configure tool-specific properties.
+	"customizations": {
+		// Configure properties specific to VS Code.
+		"vscode": {
+		}
+	},
+	
+	// 6. Set `remoteUser` to `root` to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
+	// "remoteUser": "vscode",
+
+	// the following commands are related to container lifecylce. More info: https://containers.dev/implementors/json_reference/#lifecycle-scripts
+	
+	// 7. Use 'initializeCommand' to run commands ON THE HOST before container is created or started.
+	// "initializeCommand": "",
+
+	// 8. Use 'onCreateCommand' to run commands INSIDE THE CONTAINER after it started for the first time.
+	// "onCreateCommand": "",
+	
+	// 9. Use 'updateContentCommand' to run commands if the root filetree have any changes, during container creation.
+	// "updateContentCommand": "",
+
+	// 10. Use 'postCreateCommand' to run commands after the container is created.
+	"postCreateCommand": "pip3 install --user -r requirements.txt"
+
+	// 11. Use 'postStartCommand' to run a command each time the container starts successfully.
+	// "postStartCommand": "",
+	
+	// 12. Use 'postAttachCommand' to run a command each time a tool attaches to the container successfully. 
+	// "postAttachCommand": "",
+}
+
