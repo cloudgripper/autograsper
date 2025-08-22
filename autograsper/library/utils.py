@@ -89,6 +89,8 @@ def execute_order(
         if order_type == OrderType.MOVE_XY and reverse_xy:
             order_value[0] = 1 - order_value[0]
 
+        order_type = OrderType(order_type.value)
+
         if order_type == OrderType.MOVE_XY:
             start_time = robot.move_xy(order_value[0], order_value[1])
         elif order_type == OrderType.MOVE_Z:
