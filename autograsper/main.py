@@ -511,7 +511,7 @@ def main():
 
     try:
         # Run Flask app
-        app.run(host="0.0.0.0", port=3001, debug=False, threaded=True)
+        app.run(host="0.0.0.0", port=3000, debug=False, threaded=True)
     except Exception as e:
         logging.error("Flask app error: %s", e)
     finally:
